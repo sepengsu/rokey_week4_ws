@@ -1,0 +1,6 @@
+train: C:\Users\na062\Desktop\week4\project\train_data
+val: C:\Users\na062\Desktop\week4\project\val_data
+test: C:\Users\na062\Desktop\week4\project\test_data
+
+nc: 6 
+names: ["BOOTSEL","USB","CHIPSET","OSCILLATOR","RASPBERRY PICO","HOLE"]

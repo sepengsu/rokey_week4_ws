@@ -23,7 +23,7 @@ def process_image(image):
 
     # API 호출 및 결과 받기 - 실습1
     response = requests.post(
-    url="https://suite-endpoint-api-apne2.superb-ai.com/endpoints/cf319288-8d43-4cce-8bb7-690e33a8ff2a/inference",
+    url="https://suite-endpoint-api-apne2.superb-ai.com/endpoints/839bc471-13ab-4df7-aa4d-431eb7ee4bfc/inference",
     auth=HTTPBasicAuth("kdt2024_1-11", ACCESS_KEY),
     headers={"Content-Type": "image/jpeg"},
     data=img_encoded.tobytes(),

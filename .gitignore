@@ -1,2 +1,6 @@
 vision-ai-inference-practice/
 venv/
+project/test_data
+project/augmented_data/
+project/images/
+project/train_data/
