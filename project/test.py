@@ -49,8 +49,6 @@ class Tester:
         return result
 
 paths = r"C:\Users\na062\Desktop\week4\project\test_data"
-# url = "https://suite-endpoint-api-apne2.superb-ai.com/endpoints/ed735ff8-c10a-4afb-8a27-aa1c12cc8f73/inference" # 1차
-# url = "https://suite-endpoint-api-apne2.superb-ai.com/endpoints/839bc471-13ab-4df7-aa4d-431eb7ee4bfc/inference"
 url = "https://suite-endpoint-api-apne2.superb-ai.com/endpoints/764a674a-99d5-4d4c-bf84-fc0db8b71b5f/inference"
 tester = Tester(paths,url)
 trues = np.zeros(70)
