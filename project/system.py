@@ -1,7 +1,7 @@
 import time
 import serial
 import requests
-import numpy
+import numpy as np
 from io import BytesIO
 from pprint import pprint
 import sys
@@ -10,7 +10,7 @@ import time
 from ultralytics import YOLO
 from PIL import Image, ImageTk
 
-sys.path.append("C:\\Users\\na062\\Desktop\\rokey_week4_ws\\project")
+sys.path.append(r"/home/rokey/rokey_week4_ws/project")
 from model.inference import Tester
 
 def get_img():
@@ -42,6 +42,7 @@ def crop_img(img, size_dict):
 
 
 from tkinter import Tk, Label, Button
+import tkinter as tk
 
 class InferenceSystem:
     def __init__(self,ser,model):
@@ -49,7 +50,8 @@ class InferenceSystem:
         self.model = model
         self.result = None
         self.start_time = None
-        self.img = None
+        self.img = np.zeros((320, 240, 3), dtype=np.uint8)
+        self.box_img = np.zeros((320, 240, 3), dtype=np.uint8)
 
     def __call__(self):
         self.main()
@@ -57,7 +59,6 @@ class InferenceSystem:
     def main(self):
         while 1:
             data = self.ser.read()
-            print(data)
             if data == b"0":
                 img = get_img()
                 start_inference = time.time()
@@ -76,6 +77,7 @@ class InferenceSystem:
                 for name,box in self.box.items():
                     x1,y1,x2,y2 = box
                     cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
+                self.ser.write(b'1')
             else:
                 pass
     def close(self):
@@ -95,7 +97,16 @@ class GUI:
         self.window.title("GUI")
         self.window.geometry("640x400")
         self.window.resizable(False, False)
+        # Create a frame to hold the images 
+        self.image_frame = tk.Frame(self.window)
+        self.image_frame.pack(pady=20)  # Add some padding around the frame
 
+        # Create labels inside the frame to display images
+        self.label1 = Label(self.image_frame)
+        self.label1.pack(side="left", padx=10)  # Add horizontal padding between labels
+
+        self.label2 = Label(self.image_frame)
+        self.label2.pack(side="left", padx=10)
         self.label1 = Label(self.window)
         self.label1.pack(side="left", padx=10, pady=10)
 
@@ -103,6 +114,11 @@ class GUI:
         self.label2.pack(side="right", padx=10, pady=10)
 
         self.update_images()
+
+        self.start_and_stop_button()
+        self.window.after(1000, self.update_images)
+        self.window.mainloop()
+        self.start_belt()
 
     def update_images(self):
         if self.inference_system.img is not None:
@@ -121,32 +137,31 @@ class GUI:
             self.label2.config(image=box_img_tk)
             self.label2.image = box_img_tk
 
-        self.window.after(1000, self.update_images)
+    def start_and_stop_button(self):
+            # Create a frame to hold the buttons
+            button_frame = tk.Frame(self.window)
+            button_frame.pack(pady=20)  # Add some padding around the frame
 
-        self.start_and_stop_buttom()
+            # Create the Start Button inside the frame
+            self.start_button = Button(button_frame, text="Start Belt", width=30, height=5, command=self.start_belt, bg="green")
+            self.start_button.pack(side="left", padx=10)  # Add horizontal padding between buttons
 
-        self.window.mainloop()
-
-    def start_and_stop_buttom(self):
-        self.start_button = Button(self.window, text="Start Belt", width=30, height=5, command=self.start_belt, bg="green")
-        self.start_button.pack(side="left", padx=0)
-
-        self.stop_button = Button(self.window, text="Stop Belt", width=30, height=5, command=self.stop_belt, bg="red")
-        self.stop_button.pack(side="left", padx=0)
-
+            # Create the Stop Button inside the frame
+            self.stop_button = Button(button_frame, text="Stop Belt", width=30, height=5, command=self.stop_belt, bg="red")
+            self.stop_button.pack(side="left", padx=10)  # Add padding between buttons
     def start_belt(self):
         print("Start Belt")
-        self.ser.write(b"1")
-        self.inference_system() # inference system 시행 
+        self.inference_system.ser.write(b'1')
+        self.inference_system() # inference system 
     
     def stop_belt(self):
         print("Stop Belt")
-        self.ser.write(b"0")
+        self.inference_system.ser.write(b"0")
 
 if __name__ == "__main__":
     ser = serial.Serial("/dev/ttyACM0", 9600)
-    # modelpath = r"C:\Users\na062\Desktop\rokey_week4_ws\project\model\weights\yolo11n.pt"
-    modelpath = 'yolo11n.pt'
+    # modelpath = 'yolo11n.pt'
+    modelpath = '/home/rokey/rokey_week4_ws/training_yolo/yolo11n_400img4/weights/best.pt'
     model = YOLO(modelpath)
     inference_system = InferenceSystem(ser,model)
     gui = GUI(inference_system)
