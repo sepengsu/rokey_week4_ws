@@ -11,10 +11,10 @@ import cv2
 import time
 from ultralytics import YOLO
 from PIL import Image, ImageTk
-from data.edge3 import Cropper
 
 sys.path.append(r"/home/rokey/rokey_week4_ws/project")
 from model.inference import Tester
+from data.edge3 import Cropper
 
 def get_img():
     """Get Image From USB Camera
@@ -52,30 +52,31 @@ class InferenceSystem:
         self.main()
 
     def main(self):
-        data = self.ser.read()
-        if data ==b"0":
-            print("inference start")
-            img = get_img()
-            start_inference = time.time()
-            if img is not None:
+        while 1:
+            data = self.ser.read()
+            if data == b"0":
+                print("inference start")
+                img = get_img()
+                start_inference = time.time()
+                if img is None:
+                    raise NameError
                 img = self.crooper(img)
-            tester = Tester()
-            result,box = tester(self.model, img) # 0: normal, 1: abnormal
-            self.result = result
-            self.box = box
-
-            self.img = img
-            self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
-            for name,box in self.box.items():
-                if box is None:
-                    continue
-                x1,y1,x2,y2 = box
-                cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
-            print("inference end")
-            self.start_time = start_inference
-            self.box_img = self.box_img
-            self.label = self.labeling()
-            self.ser.write(b"1")
+                tester = Tester()
+                result,box = tester(self.model, img) # 0: normal, 1: abnormal
+                self.result = result
+                self.box = box
+                self.img = img
+                self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
+                for name,box in self.box.items():
+                    if box is None:
+                        continue
+                    x1,y1,x2,y2 = box
+                    cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
+                print("inference end")
+                self.start_time = start_inference
+                self.box_img = self.box_img
+                self.label = self.labeling()
+                self.ser.write(b"1")
     
     def labeling(self):
         box_list = ['BOOTSEL','USB','CHIPSET','OSCILLATOR','RASPBERRY PICO','HOLE1','HOLE2','HOLE3','HOLE4']
@@ -114,36 +115,44 @@ class GUI:
         self.window.title("GUI")
         self.window.geometry("640x640")
         self.window.resizable(False, False)
-        self.thread = threading.Thread(target=self.run_inference, daemon=True)
-
         # Initialize labels with blank images
-        blank_image = ImageTk.PhotoImage(image=Image.new('RGB', (320, 240), (255, 255, 255)))
-        self.label1 = Label(self.image_frame, image=blank_image)
-        self.label1.img_tk = blank_image
-        self.label1.pack(side="left", padx=10)
 
-        self.label2 = Label(self.image_frame, image=blank_image)
-        self.label2.img_tk = blank_image
-        self.label2.pack(side="left", padx=10)
 
-        # Schedule the run_inference method to run after the window is initialized
+
         self.main()
+        
+        self.run_inference()
+        self.inferene_thread = threading.Thread(target=self.run_inference, daemon=True)
+        self.inferene_thread.start()
+    def run_inference(self):
+        """Run inference in an external thread."""
+        try:
+            print("Starting inference...")
+            self.inference_system()  # Perform inference
+            print("Inference completed.")
+
+            # Schedule GUI updates in the main thread
+            self.window.after(0, self.update_images)
+            self.window.after(0, self.update_text)
+        except Exception as e:
+            print(f"Error during inference: {e}")
 
     def main(self):
-        self.window = tk.Tk()
-        self.window.title("GUI")
-        self.window.geometry("640x640")
-        self.window.resizable(False, False)
 
         # Create a frame to hold the images
         self.image_frame = tk.Frame(self.window)
         self.image_frame.pack(pady=20)
 
-        # Create labels inside the frame to display images
-        self.label1 = Label(self.image_frame)
+        # Blank placeholder image
+        blank_image = ImageTk.PhotoImage(Image.new('RGB', (320, 240), (255, 255, 255)))
+
+        # Image display labels
+        self.label1 = Label(self.image_frame, image=blank_image)
+        self.label1.image = blank_image  # Retain reference
         self.label1.pack(side="left", padx=10)
 
-        self.label2 = Label(self.image_frame)
+        self.label2 = Label(self.image_frame, image=blank_image)
+        self.label2.image = blank_image  # Retain reference
         self.label2.pack(side="left", padx=10)
 
         # Create a frame to hold the defect information
@@ -163,11 +172,10 @@ class GUI:
         # Schedule image updates every 100 milliseconds (0.1 seconds)
         self.window.after(100, self.update_text)
         self.window.after(100, self.update_images)
-        self.window.mainloop()
 
-    def run_inference(self):
-        if self.inference_system.ser.read() == b"0":
-            self.inference_system()
+        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
+        
+        self.window.mainloop()
 
     def update_images(self):
         # Update first image
@@ -175,11 +183,10 @@ class GUI:
             img = cv2.cvtColor(self.inference_system.img, cv2.COLOR_BGR2RGB)
             img = cv2.resize(img, (320, 240))
             img = Image.fromarray(img)
-            print(type(img))
             img_tk = ImageTk.PhotoImage(image=img)
 
             # Keep a reference to the image object
-            self.label1.img_tk = img_tk
+            # self.label1.img_tk = img_tk
             self.label1.config(image=img_tk)
 
         # Update the second image
@@ -188,9 +195,6 @@ class GUI:
             box_img = cv2.resize(box_img, (320, 240))
             box_img = Image.fromarray(box_img)
             box_img_tk = ImageTk.PhotoImage(image=box_img)
-
-            # Keep a reference to the image object
-            self.label2.img_tk = box_img_tk
             self.label2.config(image=box_img_tk)
 
         # Re-schedule the update_images method after 100 ms
@@ -241,6 +245,11 @@ class GUI:
         self.inference_system.ser.write(b"0")
         # Disable Stop button and enable Start button
         self.start_button.config(state="normal")
+
+    def on_close(self):
+        """Handle GUI closure."""
+        print("Closing GUI...")
+        self.window.destroy()
 
 
 if __name__ == "__main__":
