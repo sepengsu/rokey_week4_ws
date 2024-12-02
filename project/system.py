@@ -110,8 +110,13 @@ class GUI:
     def __init__(self, inference_system):
         self.inference_system = inference_system
         self.inference_system.ser.write(b'0')  # Set initial state
-        self.thread =threading.Thread(target=self.run_inference,daemon=True)
-        self.thread.start()
+        self.window = tk.Tk()
+        self.window.title("GUI")
+        self.window.geometry("640x640")
+        self.window.resizable(False, False)
+
+        # Schedule the run_inference method to run after the window is initialized
+        self.window.after(0, self.run_inference)
         self.main()
 
     def main(self):
