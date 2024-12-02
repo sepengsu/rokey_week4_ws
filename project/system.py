@@ -1,4 +1,3 @@
-
 import time
 import threading
 import serial
@@ -14,7 +13,6 @@ from PIL import Image, ImageTk
 
 sys.path.append(r"/home/rokey/rokey_week4_ws/project")
 from model.inference import Tester
-from data.edge3 import Cropper
 
 def get_img():
     """Get Image From USB Camera
@@ -34,6 +32,16 @@ def get_img():
 
     return img
 
+
+def crop_img(img, size_dict):
+    x = size_dict["x"]
+    y = size_dict["y"]
+    w = size_dict["width"]
+    h = size_dict["height"]
+    img = img[y : y + h, x : x + w]
+    return img
+
+
 from tkinter import Tk, Label, Button
 import tkinter as tk
 
@@ -46,7 +54,6 @@ class InferenceSystem:
         self.img = np.zeros((320, 240, 3), dtype=np.uint8)
         self.box_img = np.zeros((320, 240, 3), dtype=np.uint8)
         self.label = None
-        self.crooper = Cropper()
 
     def __call__(self):
         self.main()
@@ -54,17 +61,20 @@ class InferenceSystem:
     def main(self):
         while 1:
             data = self.ser.read()
-            if data == b"0":
+            if data ==b"0":
                 print("inference start")
                 img = get_img()
                 start_inference = time.time()
-                if img is None:
-                    raise NameError
-                img = self.crooper(img)
+                crop_info = {"x": 200, "y": 100, "width": 300, "height": 300}
+
+                if crop_info is not None:
+                    img = crop_img(img, crop_info)
+
                 tester = Tester()
                 result,box = tester(self.model, img) # 0: normal, 1: abnormal
                 self.result = result
                 self.box = box
+                self.start_time = start_inference
                 self.img = img
                 self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
                 for name,box in self.box.items():
@@ -73,7 +83,6 @@ class InferenceSystem:
                     x1,y1,x2,y2 = box
                     cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
                 print("inference end")
-                self.start_time = start_inference
                 self.box_img = self.box_img
                 self.label = self.labeling()
                 self.ser.write(b"1")
@@ -86,12 +95,9 @@ class InferenceSystem:
         if self.result == 0:
             text = "Normal"
             return text
-        detected_objects = self.box.keys()
-        test = "Anormal: " 
         for box in box_list:
             if self.box[box] is None:
-                text +=f"{box} is abnormal\n"
-        text = text[:-1]
+                text+=f"{box} is Abnormal\n"
         return text
 
             
@@ -110,49 +116,26 @@ from PIL import Image, ImageTk
 class GUI:
     def __init__(self, inference_system):
         self.inference_system = inference_system
-        self.inference_system.ser.write(b'1')  # Set initial state
+        self.inference_system.ser.write(b'0')  # Set initial state
+        self.thread =threading.Thread(target=self.run_inference,daemon=True)
+        self.thread.start()
+        self.main()
+
+    def main(self):
         self.window = tk.Tk()
         self.window.title("GUI")
         self.window.geometry("640x640")
         self.window.resizable(False, False)
-        # Initialize labels with blank images
-
-
-
-        self.main()
-        
-        self.run_inference()
-        self.inferene_thread = threading.Thread(target=self.run_inference, daemon=True)
-        self.inferene_thread.start()
-    def run_inference(self):
-        """Run inference in an external thread."""
-        try:
-            print("Starting inference...")
-            self.inference_system()  # Perform inference
-            print("Inference completed.")
-
-            # Schedule GUI updates in the main thread
-            self.window.after(0, self.update_images)
-            self.window.after(0, self.update_text)
-        except Exception as e:
-            print(f"Error during inference: {e}")
-
-    def main(self):
 
         # Create a frame to hold the images
         self.image_frame = tk.Frame(self.window)
         self.image_frame.pack(pady=20)
 
-        # Blank placeholder image
-        blank_image = ImageTk.PhotoImage(Image.new('RGB', (320, 240), (255, 255, 255)))
-
-        # Image display labels
-        self.label1 = Label(self.image_frame, image=blank_image)
-        self.label1.image = blank_image  # Retain reference
+        # Create labels inside the frame to display images
+        self.label1 = Label(self.image_frame)
         self.label1.pack(side="left", padx=10)
 
-        self.label2 = Label(self.image_frame, image=blank_image)
-        self.label2.image = blank_image  # Retain reference
+        self.label2 = Label(self.image_frame)
         self.label2.pack(side="left", padx=10)
 
         # Create a frame to hold the defect information
@@ -172,10 +155,10 @@ class GUI:
         # Schedule image updates every 100 milliseconds (0.1 seconds)
         self.window.after(100, self.update_text)
         self.window.after(100, self.update_images)
-
-        self.window.protocol("WM_DELETE_WINDOW", self.on_close)
-        
         self.window.mainloop()
+
+    def run_inference(self):
+        self.inference_system()
 
     def update_images(self):
         # Update first image
@@ -184,18 +167,18 @@ class GUI:
             img = cv2.resize(img, (320, 240))
             img = Image.fromarray(img)
             img_tk = ImageTk.PhotoImage(image=img)
-
-            # Keep a reference to the image object
-            # self.label1.img_tk = img_tk
             self.label1.config(image=img_tk)
+            self.label1.image = img_tk
 
-        # Update the second image
+        # Update second image
         if self.inference_system.box_img is not None:
             box_img = cv2.cvtColor(self.inference_system.box_img, cv2.COLOR_BGR2RGB)
             box_img = cv2.resize(box_img, (320, 240))
             box_img = Image.fromarray(box_img)
             box_img_tk = ImageTk.PhotoImage(image=box_img)
             self.label2.config(image=box_img_tk)
+            self.label2.image = box_img_tk
+
 
         # Re-schedule the update_images method after 100 ms
         self.window.after(100, self.update_images)
@@ -204,18 +187,14 @@ class GUI:
         # Update defect information
         if self.inference_system.label is not None:
             self.defect_label.config(text=self.inference_system.label)
-            print(f"Updated defect label: {self.inference_system.label}")
 
         # Update elapsed time
         if self.inference_system.start_time is not None and self.inference_system.label is not None:
             elapsed_time = time.time() - self.inference_system.start_time
             self.time_label.config(text=f"Elapsed Time: {elapsed_time:.2f} seconds")
-            print("end time ")
-            self.inference_system.start_time = None
             self.inference_system.label = None
-
-        # Reschedule the update_text method
-        self.window.after(100, self.update_text)
+            self.inference_system.start_time = None
+        self.window.after(100, self.update_text)   
 
     def start_and_stop_button(self):
         # Create a frame to hold the buttons
@@ -246,16 +225,11 @@ class GUI:
         # Disable Stop button and enable Start button
         self.start_button.config(state="normal")
 
-    def on_close(self):
-        """Handle GUI closure."""
-        print("Closing GUI...")
-        self.window.destroy()
-
 
 if __name__ == "__main__":
     ser = serial.Serial("/dev/ttyACM0", 9600)
+    # modelpath = 'yolo11n.pt'
     modelpath = '/home/rokey/rokey_week4_ws/training_yolo/yolo11n_400img4/weights/best.pt'
     model = YOLO(modelpath)
     inference_system = InferenceSystem(ser,model)
     gui = GUI(inference_system)
-    
