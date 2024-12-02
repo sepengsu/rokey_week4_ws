@@ -180,7 +180,8 @@ class PointRotate:
         
 
 def _test():
-    path = r'C:\Users\na062\Desktop\week4\project\data\st.json'
+    # path = r'C:\Users\na062\Desktop\week4\project\data\st.json'
+    path = r"C:\Users\na062\Desktop\rokey_week4_ws\project\data\st.json"
     OBJECT_LIST =["BOOTSEL","USB","CHIPSET","OSCILLATOR","RASPBERRY PICO","HOLE"]
     with open(path, 'r') as f:
         data = json.load(f)

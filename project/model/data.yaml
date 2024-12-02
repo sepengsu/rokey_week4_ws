@@ -1,6 +1,19 @@
-train: C:\Users\na062\Desktop\week4\project\train_data
-val: C:\Users\na062\Desktop\week4\project\val_data
-test: C:\Users\na062\Desktop\week4\project\test_data
+train: C:\Users\na062\Desktop\rokey_week4_ws\project\data\images\train
+val: C:\Users\na062\Desktop\rokey_week4_ws\project\data\images\val
+test: C:\Users\na062\Desktop\rokey_week4_ws\project\data\images\test
 
 nc: 6 
-names: ["BOOTSEL","USB","CHIPSET","OSCILLATOR","RASPBERRY PICO","HOLE"]
+# names: 
+#   0: OSCILLATOR
+#   1: BOOTSEL
+#   2: RASPBERRY PICO
+#   3: HOLE
+#   4: CHIPSET
+#   5: USB
+names:
+  0: OSCILLATOR
+  1: RASPBERRY PICO
+  2: HOLE
+  3: BOOTSEL
+  4: CHIPSET
+  5: USB

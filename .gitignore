@@ -3,4 +3,12 @@ venv/
 project/test_data
 project/augmented_data/
 project/images/
-project/train_data/
+train_data/
+test_data/
+valid_data/
+temp.py
+day4_raw/
+project/data/images/
+project/data/labels/
+day4_yolov5/
+dfive_final/
