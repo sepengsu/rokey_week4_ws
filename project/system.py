@@ -81,7 +81,24 @@ class InferenceSystem:
                     cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
                 print("inference end")
                 self.box_img = self.box_img
+                self.label = self.labeling()
                 self.ser.write(b"1")
+    
+    def labeling(self):
+        box_list = ['BOOTSEL','USB','CHIPSET','OSCILLATOR','RASPBERRY PICO','HOLE1','HOLE2','HOLE3','HOLE4']
+        text = ""
+        if self.result is None:
+            raise Exception("Inference not performed yet")
+        if self.result == 0:
+            text = "Normal"
+            return text
+        detected_objects = self.box.keys()
+        for box in box_list:
+            if box not in detected_objects:
+                text += f"{box} not detected,"
+        return text
+
+            
     def close(self):
         self.ser.close()
         self.result = None
@@ -119,10 +136,22 @@ class GUI:
         self.label2 = Label(self.image_frame)
         self.label2.pack(side="left", padx=10)
 
+        # Create a frame to hold the defect information
+        self.defect_frame = tk.Frame(self.window)
+        self.defect_frame.pack(pady=20)
+
+        # Create a label to display defect information
+        self.defect_label = Label(self.defect_frame, text="Defect: None", font=("Helvetica", 16))
+        self.defect_label.pack()
+        # Create a label to display elapsed time
+        self.time_label = Label(self.defect_frame, text="Elapsed Time: 0.00 seconds", font=("Helvetica", 16))
+        self.time_label.pack()
+
         # Create buttons for starting and stopping
         self.start_and_stop_button()
 
         # Schedule image updates every 100 milliseconds (0.1 seconds)
+        self.window.after(100, self.update_text)
         self.window.after(100, self.update_images)
         self.window.mainloop()
 
@@ -151,10 +180,23 @@ class GUI:
         # Print elapsed time since inference start, if applicable
         if self.inference_system.start_time is not None:
             print(f"Elapsed Time: {time.time() - self.inference_system.start_time:.2f} seconds")
+            self.inference_system.start_time = None
 
         # Re-schedule the update_images method after 100 ms
         self.window.after(100, self.update_images)
-            
+    
+    def update_text(self):
+        # Update defect information
+        if self.inference_system.label is not None:
+            self.defect_label.config(text=self.inference_system.label)
+
+        # Update elapsed time
+        if self.inference_system.start_time is not None:
+            elapsed_time = time.time() - self.inference_system.start_time
+            self.time_label.config(text=f"Elapsed Time: {elapsed_time:.2f} seconds")
+            self.inference_system.start_time = None
+        self.window.after(100, self.update_text)   
+
     def start_and_stop_button(self):
         # Create a frame to hold the buttons
         self.button_frame = tk.Frame(self.window)
