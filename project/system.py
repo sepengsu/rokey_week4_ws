@@ -1,3 +1,4 @@
+
 import time
 import threading
 import serial
@@ -114,6 +115,16 @@ class GUI:
         self.window.geometry("640x640")
         self.window.resizable(False, False)
         self.thread = threading.Thread(target=self.run_inference, daemon=True)
+
+        # Initialize labels with blank images
+        blank_image = ImageTk.PhotoImage(image=Image.new('RGB', (320, 240), (255, 255, 255)))
+        self.label1 = Label(self.image_frame, image=blank_image)
+        self.label1.img_tk = blank_image
+        self.label1.pack(side="left", padx=10)
+
+        self.label2 = Label(self.image_frame, image=blank_image)
+        self.label2.img_tk = blank_image
+        self.label2.pack(side="left", padx=10)
 
         # Schedule the run_inference method to run after the window is initialized
         self.main()
