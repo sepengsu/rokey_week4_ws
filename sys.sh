@@ -1,0 +1,1 @@
+/home/rokey/miniconda3/bin/python /home/rokey/rokey_week4_ws/project/system.py
