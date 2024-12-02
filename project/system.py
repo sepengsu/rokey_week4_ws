@@ -67,10 +67,15 @@ class InferenceSystem:
                     img = crop_img(img, crop_info)
 
                 tester = Tester()
-                result = tester(self.model, img) # 0: normal, 1: abnormal
+                result,box = tester(self.model, img) # 0: normal, 1: abnormal
                 self.result = result
+                self.box = box
                 self.start_time = start_inference
                 self.img = img
+                self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
+                for name,box in self.box.items():
+                    x1,y1,x2,y2 = box
+                    cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
             else:
                 pass
     def close(self):
@@ -108,13 +113,13 @@ class GUI:
             self.label1.config(image=img_tk)
             self.label1.image = img_tk
 
-        if self.inference_system.result is not None:
-            result_img = cv2.cvtColor(self.inference_system.result, cv2.COLOR_BGR2RGB)
-            result_img = cv2.resize(result_img, (320, 240))
-            result_img = Image.fromarray(result_img)
-            result_img_tk = ImageTk.PhotoImage(image=result_img)
-            self.label2.config(image=result_img_tk)
-            self.label2.image = result_img_tk
+        if self.inference_system.box_img is not None:
+            box_img = cv2.cvtColor(self.inference_system.box_img, cv2.COLOR_BGR2RGB)
+            box_img = cv2.resize(box_img, (320, 240))
+            box_img = Image.fromarray(box_img)
+            box_img_tk = ImageTk.PhotoImage(image=box_img)
+            self.label2.config(image=box_img_tk)
+            self.label2.image = box_img_tk
 
         self.window.after(1000, self.update_images)
 

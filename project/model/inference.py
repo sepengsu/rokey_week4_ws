@@ -42,9 +42,8 @@ class Tester:
         class_count = {class_name: 0 for class_name in OBJECT_LIST}
         for obj in results["objects"]:
             class_count[obj["class"]] += 1
-        if class_count != CLASS_COUNT:
-            return ABNORMAL
         box_dict ={name:None for name in BOX_LIST}
+        show_dict = {name:None for name in BOX_LIST}
         hole_num = 0
         for obj in results["objects"]:
             name = obj["class"]
@@ -54,12 +53,15 @@ class Tester:
             x1,y1,x2,y2 = obj['box']
             x,y = int((x1+x2)/2),int((y1+y2)/2)
             box_dict[name] = [x,y]
+            show_dict[name] = obj["box"]
+        if class_count != CLASS_COUNT:
+            return ABNORMAL, show_dict
 
         ps = PointSort(box_dict['USB'],box_dict['CHIPSET'])
         sortings = ps([box_dict['HOLE1'],box_dict['HOLE2'],box_dict['HOLE3'],box_dict['HOLE4']]) 
         if sortings == -1:
             print("sort error")
-            return ABNORMAL
+            return ABNORMAL, show_dict
         box_dict['HOLE1'],box_dict['HOLE2'],box_dict['HOLE3'],box_dict['HOLE4'] = sortings
         pr = PointRotate(35)
         is_possible = pr(box_dict)
@@ -67,8 +69,8 @@ class Tester:
             print("pos error")
             from detect import show
             show(self.img,results["objects"])
-            return ABNORMAL
-        return NORMAL
+            return ABNORMAL, box_dict
+        return NORMAL, show_dict
     
     def convert(self,results):
         c_results = {}

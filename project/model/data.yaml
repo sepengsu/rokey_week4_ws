@@ -1,4 +1,4 @@
-train: C:\Users\na062\Desktop\rokey_week4_ws\project\data\images\train
+train: C:\Users\na062\Desktop\rokey_week4_ws\project\augmented_data\images\train
 val: C:\Users\na062\Desktop\rokey_week4_ws\project\data\images\val
 test: C:\Users\na062\Desktop\rokey_week4_ws\project\data\images\test
 

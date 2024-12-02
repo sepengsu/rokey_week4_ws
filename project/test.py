@@ -36,7 +36,8 @@ class Tester:
         for obj in results["objects"]:
             class_count[obj["class"]] += 1
 
-        return 0 if class_count == CLASS_COUNT else 1 # 0: normal, 1: abnormal
+        is_abnormal = False if class_count == CLASS_COUNT else True
+        
     
     def test_all(self):
         result = []
