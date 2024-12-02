@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 sys.path.append(os.path.dirname(os.path.abspath(os.path.dirname(__file__))))
 from point_rotate import PointSort, PointRotate
+
 IMAGE_FILE_PATH = r"C:\Users\na062\Desktop\week4\project\52.jpg"
 ACCESS_KEY = "Vc4OHmAg4o5vg9Mme5nqS6R53Wx4TX1K4xTm61Ti"
 CLASS_COUNT = {class_name: 0 for class_name in ["BOOTSEL", "USB", "CHIPSET", "OSCILLATOR", "RASPBERRY PICO", "HOLE"]}

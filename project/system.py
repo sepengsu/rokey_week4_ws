@@ -10,6 +10,7 @@ import cv2
 import time
 from ultralytics import YOLO
 from PIL import Image, ImageTk
+from data.edge3 import Cropper
 
 sys.path.append(r"/home/rokey/rokey_week4_ws/project")
 from model.inference import Tester
@@ -32,16 +33,6 @@ def get_img():
 
     return img
 
-
-def crop_img(img, size_dict):
-    x = size_dict["x"]
-    y = size_dict["y"]
-    w = size_dict["width"]
-    h = size_dict["height"]
-    img = img[y : y + h, x : x + w]
-    return img
-
-
 from tkinter import Tk, Label, Button
 import tkinter as tk
 
@@ -53,6 +44,8 @@ class InferenceSystem:
         self.start_time = None
         self.img = np.zeros((320, 240, 3), dtype=np.uint8)
         self.box_img = np.zeros((320, 240, 3), dtype=np.uint8)
+        self.label = None
+        self.crooper = Cropper()
 
     def __call__(self):
         self.main()
@@ -64,22 +57,22 @@ class InferenceSystem:
                 print("inference start")
                 img = get_img()
                 start_inference = time.time()
-                crop_info = {"x": 200, "y": 100, "width": 300, "height": 300}
-
-                if crop_info is not None:
-                    img = crop_img(img, crop_info)
-
+                if img is not None:
+                    img = self.crooper(img)
                 tester = Tester()
                 result,box = tester(self.model, img) # 0: normal, 1: abnormal
                 self.result = result
                 self.box = box
-                self.start_time = start_inference
+
                 self.img = img
                 self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
                 for name,box in self.box.items():
+                    if box is None:
+                        continue
                     x1,y1,x2,y2 = box
                     cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
                 print("inference end")
+                self.start_time = start_inference
                 self.box_img = self.box_img
                 self.label = self.labeling()
                 self.ser.write(b"1")
@@ -93,9 +86,11 @@ class InferenceSystem:
             text = "Normal"
             return text
         detected_objects = self.box.keys()
+        test = "Anormal: " 
         for box in box_list:
-            if box not in detected_objects:
-                text += f"{box} not detected,"
+            if self.box[box] is None:
+                text +=f"{box} is abnormal\n"
+        text = text[:-1]
         return text
 
             
@@ -177,11 +172,6 @@ class GUI:
             self.label2.config(image=box_img_tk)
             self.label2.image = box_img_tk
 
-        # Print elapsed time since inference start, if applicable
-        if self.inference_system.start_time is not None:
-            print(f"Elapsed Time: {time.time() - self.inference_system.start_time:.2f} seconds")
-            self.inference_system.start_time = None
-
         # Re-schedule the update_images method after 100 ms
         self.window.after(100, self.update_images)
     
@@ -189,13 +179,18 @@ class GUI:
         # Update defect information
         if self.inference_system.label is not None:
             self.defect_label.config(text=self.inference_system.label)
+            print(f"Updated defect label: {self.inference_system.label}")
 
         # Update elapsed time
-        if self.inference_system.start_time is not None:
+        if self.inference_system.start_time is not None and self.inference_system.label is not None:
             elapsed_time = time.time() - self.inference_system.start_time
             self.time_label.config(text=f"Elapsed Time: {elapsed_time:.2f} seconds")
+            print("end time ")
             self.inference_system.start_time = None
-        self.window.after(100, self.update_text)   
+            self.inference_system.label = None
+
+        # Reschedule the update_text method
+        self.window.after(100, self.update_text)
 
     def start_and_stop_button(self):
         # Create a frame to hold the buttons
@@ -229,7 +224,6 @@ class GUI:
 
 if __name__ == "__main__":
     ser = serial.Serial("/dev/ttyACM0", 9600)
-    # modelpath = 'yolo11n.pt'
     modelpath = '/home/rokey/rokey_week4_ws/training_yolo/yolo11n_400img4/weights/best.pt'
     model = YOLO(modelpath)
     inference_system = InferenceSystem(ser,model)
