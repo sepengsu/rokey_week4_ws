@@ -51,31 +51,30 @@ class InferenceSystem:
         self.main()
 
     def main(self):
-        while 1:
-            data = self.ser.read()
-            if data ==b"0":
-                print("inference start")
-                img = get_img()
-                start_inference = time.time()
-                if img is not None:
-                    img = self.crooper(img)
-                tester = Tester()
-                result,box = tester(self.model, img) # 0: normal, 1: abnormal
-                self.result = result
-                self.box = box
+        data = self.ser.read()
+        if data ==b"0":
+            print("inference start")
+            img = get_img()
+            start_inference = time.time()
+            if img is not None:
+                img = self.crooper(img)
+            tester = Tester()
+            result,box = tester(self.model, img) # 0: normal, 1: abnormal
+            self.result = result
+            self.box = box
 
-                self.img = img
-                self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
-                for name,box in self.box.items():
-                    if box is None:
-                        continue
-                    x1,y1,x2,y2 = box
-                    cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
-                print("inference end")
-                self.start_time = start_inference
-                self.box_img = self.box_img
-                self.label = self.labeling()
-                self.ser.write(b"1")
+            self.img = img
+            self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
+            for name,box in self.box.items():
+                if box is None:
+                    continue
+                x1,y1,x2,y2 = box
+                cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
+            print("inference end")
+            self.start_time = start_inference
+            self.box_img = self.box_img
+            self.label = self.labeling()
+            self.ser.write(b"1")
     
     def labeling(self):
         box_list = ['BOOTSEL','USB','CHIPSET','OSCILLATOR','RASPBERRY PICO','HOLE1','HOLE2','HOLE3','HOLE4']
@@ -114,9 +113,9 @@ class GUI:
         self.window.title("GUI")
         self.window.geometry("640x640")
         self.window.resizable(False, False)
+        self.thread = threading.Thread(target=self.run_inference, daemon=True)
 
         # Schedule the run_inference method to run after the window is initialized
-        self.window.after(0, self.run_inference)
         self.main()
 
     def main(self):
@@ -156,7 +155,9 @@ class GUI:
         self.window.mainloop()
 
     def run_inference(self):
-        self.inference_system()
+        if self.inference_system.ser.read() == b"1":
+            self.inference_system()
+        self.window.after(100, self.run_inference)
 
     def update_images(self):
         # Update first image
