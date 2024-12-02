@@ -108,7 +108,7 @@ from PIL import Image, ImageTk
 class GUI:
     def __init__(self, inference_system):
         self.inference_system = inference_system
-        self.inference_system.ser.write(b'0')  # Set initial state
+        self.inference_system.ser.write(b'1')  # Set initial state
         self.window = tk.Tk()
         self.window.title("GUI")
         self.window.geometry("640x640")
@@ -155,9 +155,8 @@ class GUI:
         self.window.mainloop()
 
     def run_inference(self):
-        if self.inference_system.ser.read() == b"1":
+        if self.inference_system.ser.read() == b"0":
             self.inference_system()
-        self.window.after(100, self.run_inference)
 
     def update_images(self):
         # Update first image
@@ -165,18 +164,23 @@ class GUI:
             img = cv2.cvtColor(self.inference_system.img, cv2.COLOR_BGR2RGB)
             img = cv2.resize(img, (320, 240))
             img = Image.fromarray(img)
+            print(type(img))
             img_tk = ImageTk.PhotoImage(image=img)
-            self.label1.config(image=img_tk)
-            self.label1.image = img_tk
 
-        # Update second image
+            # Keep a reference to the image object
+            self.label1.img_tk = img_tk
+            self.label1.config(image=img_tk)
+
+        # Update the second image
         if self.inference_system.box_img is not None:
             box_img = cv2.cvtColor(self.inference_system.box_img, cv2.COLOR_BGR2RGB)
             box_img = cv2.resize(box_img, (320, 240))
             box_img = Image.fromarray(box_img)
             box_img_tk = ImageTk.PhotoImage(image=box_img)
+
+            # Keep a reference to the image object
+            self.label2.img_tk = box_img_tk
             self.label2.config(image=box_img_tk)
-            self.label2.image = box_img_tk
 
         # Re-schedule the update_images method after 100 ms
         self.window.after(100, self.update_images)
