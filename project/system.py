@@ -1,4 +1,5 @@
 import time
+import threading
 import serial
 import requests
 import numpy as np
@@ -57,27 +58,30 @@ class InferenceSystem:
         self.main()
 
     def main(self):
-        print("inference start")
-        img = get_img()
-        start_inference = time.time()
-        crop_info = {"x": 200, "y": 100, "width": 300, "height": 300}
+        while 1:
+            data = self.ser.read()
+            if data ==b"0":
+                print("inference start")
+                img = get_img()
+                start_inference = time.time()
+                crop_info = {"x": 200, "y": 100, "width": 300, "height": 300}
 
-        if crop_info is not None:
-            img = crop_img(img, crop_info)
+                if crop_info is not None:
+                    img = crop_img(img, crop_info)
 
-        tester = Tester()
-        result,box = tester(self.model, img) # 0: normal, 1: abnormal
-        self.result = result
-        self.box = box
-        self.start_time = start_inference
-        self.img = img
-        self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
-        for name,box in self.box.items():
-            x1,y1,x2,y2 = box
-            cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
-        print("inference end")
-        self.box_img = self.box_img
-        self.ser.write(b"1")
+                tester = Tester()
+                result,box = tester(self.model, img) # 0: normal, 1: abnormal
+                self.result = result
+                self.box = box
+                self.start_time = start_inference
+                self.img = img
+                self.box_img = img.copy() # box 구조: [x1,y1,x2,y2]
+                for name,box in self.box.items():
+                    x1,y1,x2,y2 = box
+                    cv2.rectangle(self.box_img,(x1,y1),(x2,y2),(0,255,0),2)
+                print("inference end")
+                self.box_img = self.box_img
+                self.ser.write(b"1")
     def close(self):
         self.ser.close()
         self.result = None
@@ -94,6 +98,8 @@ class GUI:
     def __init__(self, inference_system):
         self.inference_system = inference_system
         self.inference_system.ser.write(b'0')  # Set initial state
+        self.thread =threading.Thread(target=self.run_inference,daemon=True)
+        self.thread.start()
         self.main()
 
     def main(self):
@@ -120,10 +126,9 @@ class GUI:
         self.window.after(100, self.update_images)
         self.window.mainloop()
 
-    def detection(self):
-        if self.inference_system.ser.read(b"0"):
-            self.inference_system.main()
-            
+    def run_inference(self):
+        self.inference_system()
+
     def update_images(self):
         # Update first image
         if self.inference_system.img is not None:
