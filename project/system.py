@@ -139,15 +139,15 @@ class GUI:
 
     def start_and_stop_button(self):
             # Create a frame to hold the buttons
-            button_frame = tk.Frame(self.window)
-            button_frame.pack(pady=20)  # Add some padding around the frame
+            self.button_frame = tk.Frame(self.window)
+            self.button_frame.pack(pady=20)
 
             # Create the Start Button inside the frame
-            self.start_button = Button(button_frame, text="Start Belt", width=30, height=5, command=self.start_belt, bg="green")
+            self.start_button = Button(self.button_frame, text="Start Belt", width=30, height=5, command=self.start_belt, bg="green")
             self.start_button.pack(side="left", padx=10)  # Add horizontal padding between buttons
 
             # Create the Stop Button inside the frame
-            self.stop_button = Button(button_frame, text="Stop Belt", width=30, height=5, command=self.stop_belt, bg="red")
+            self.stop_button = Button(self.button_frame, text="Stop Belt", width=30, height=5, command=self.stop_belt, bg="red")
             self.stop_button.pack(side="left", padx=10)  # Add padding between buttons
     def start_belt(self):
         print("Start Belt")
